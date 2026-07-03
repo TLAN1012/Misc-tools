@@ -33,6 +33,18 @@
     showToast._t = setTimeout(() => toast.classList.remove("show"), 1800);
   };
 
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  // The current result stops matching the inputs the moment the list changes,
+  // so any add/remove/reorder must drop it and disable download/copy until a
+  // fresh generate.
+  function invalidateResult() {
+    resultBlob = null;
+    dlBtn.disabled = true;
+    copyBtn.disabled = true;
+  }
+
   const loadImage = (file) => new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
     const img = new Image();
@@ -54,6 +66,7 @@
     }
     // keep upload order; sorting by name is unreliable for screenshots
     items = items.concat(loaded);
+    invalidateResult();
     renderThumbs();
     syncButtons();
   }
@@ -62,6 +75,7 @@
     const it = items.find((i) => i.id === id);
     if (it) URL.revokeObjectURL(it.url);
     items = items.filter((i) => i.id !== id);
+    invalidateResult();
     renderThumbs();
     syncButtons();
   }
@@ -81,7 +95,7 @@
         <span class="ord">${idx + 1}</span>
         <img src="${it.url}" alt="" />
         <span class="meta">
-          <div class="n">${it.name}</div>
+          <div class="n">${esc(it.name)}</div>
           <div class="d">${it.w} × ${it.h}</div>
         </span>
         <button class="x" title="移除" data-x="${it.id}">×</button>`;
@@ -122,6 +136,7 @@
     const to = items.findIndex((i) => i.id === targetId);
     const [moved] = items.splice(from, 1);
     items.splice(to, 0, moved);
+    invalidateResult();
     renderThumbs();
   });
 
@@ -237,7 +252,11 @@
     const score = best / norm;                  // 0 = identical
     if (bestYb < 0 || score > MATCH_THRESHOLD) return { skip: 0, score };
     // A's bottom (row hA) lines up with B row (bestYb + bandH)
-    const skip = Math.min(bestYb + bandH, hB);
+    const skip = bestYb + bandH;
+    // A match that consumes the whole of B leaves no new content to append —
+    // almost always a false positive from a repeated footer, browser chrome
+    // or blank margin at the bottom. Reject it rather than drop the image.
+    if (skip >= hB) return { skip: 0, score };
     return { skip, score };
   }
 
