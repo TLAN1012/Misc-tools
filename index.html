@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Misc-tools · 小工具集合</title>
+  <meta name="description" content="一個個人小工具 webapp 實驗場與收集場。" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A7%B0%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="./">
+        <span class="logo">🧰</span>
+        <span>Misc-tools</span>
+      </a>
+      <span class="spacer"></span>
+      <a class="back" href="https://github.com/tlan1012/misc-tools" target="_blank" rel="noopener">GitHub ↗</a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <h1>小工具集合</h1>
+      <p>一個個人小工具的實驗場與收集場。全部都在瀏覽器裡跑，資料不會離開你的裝置。</p>
+    </section>
+
+    <section class="grid" id="grid"></section>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap">Made for fun · 所有工具皆在本機瀏覽器執行 · <a href="https://github.com/tlan1012/misc-tools" target="_blank" rel="noopener">原始碼</a></div>
+  </footer>
+
+  <script src="assets/tools.js"></script>
+  <script>
+    const grid = document.getElementById("grid");
+    for (const t of window.TOOLS) {
+      const ready = t.status === "ready";
+      const el = document.createElement(ready ? "a" : "div");
+      el.className = "card" + (ready ? "" : " soon");
+      if (ready) el.href = t.href;
+      el.innerHTML = `
+        <div class="emoji">${t.emoji}</div>
+        <h3>${t.title}</h3>
+        <p>${t.desc}</p>
+        <span class="tag">${ready ? "開啟工具" : "即將推出"}</span>`;
+      grid.appendChild(el);
+    }
+  </script>
+</body>
+</html>

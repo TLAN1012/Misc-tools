@@ -1,0 +1,138 @@
+/* ---------------------------------------------------------------------------
+   Misc-tools — shared design system
+   A tiny, dependency-free stylesheet shared across the hub and every tool.
+--------------------------------------------------------------------------- */
+
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-2: #f0f2f5;
+  --border: #e2e5ea;
+  --text: #1a1d24;
+  --text-muted: #656d7a;
+  --accent: #4f6bff;
+  --accent-hover: #3d57e6;
+  --accent-soft: #eaeeff;
+  --danger: #e5484d;
+  --shadow: 0 1px 2px rgba(20, 25, 40, .06), 0 8px 24px rgba(20, 25, 40, .06);
+  --radius: 14px;
+  --radius-sm: 9px;
+  --maxw: 960px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC",
+          "PingFang TC", "Microsoft JhengHei", Roboto, Helvetica, Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1115;
+    --surface: #181b22;
+    --surface-2: #1f232c;
+    --border: #2a2f3a;
+    --text: #e9ecf1;
+    --text-muted: #9aa3b2;
+    --accent: #7c92ff;
+    --accent-hover: #93a5ff;
+    --accent-soft: #20263c;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 10px 30px rgba(0, 0, 0, .35);
+  }
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { color: var(--accent-hover); }
+
+.wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 20px; }
+
+/* ---- Top bar --------------------------------------------------------- */
+.topbar {
+  position: sticky; top: 0; z-index: 20;
+  backdrop-filter: saturate(160%) blur(10px);
+  background: color-mix(in srgb, var(--bg) 80%, transparent);
+  border-bottom: 1px solid var(--border);
+}
+.topbar .wrap {
+  display: flex; align-items: center; gap: 14px;
+  height: 60px;
+}
+.brand {
+  display: flex; align-items: center; gap: 10px;
+  font-weight: 700; color: var(--text); letter-spacing: -.01em;
+}
+.brand .logo {
+  width: 30px; height: 30px; border-radius: 8px;
+  display: grid; place-items: center;
+  background: linear-gradient(135deg, var(--accent), #9b6bff);
+  color: #fff; font-size: 17px;
+}
+.topbar .spacer { flex: 1; }
+.topbar a.back { color: var(--text-muted); font-size: 14px; font-weight: 600; }
+.topbar a.back:hover { color: var(--text); }
+
+/* ---- Hero ------------------------------------------------------------ */
+.hero { padding: 54px 0 26px; }
+.hero h1 {
+  margin: 0 0 10px; font-size: clamp(28px, 5vw, 40px);
+  letter-spacing: -.02em; line-height: 1.15;
+}
+.hero p { margin: 0; color: var(--text-muted); font-size: 17px; max-width: 620px; }
+
+/* ---- Tool grid ------------------------------------------------------- */
+.grid {
+  display: grid; gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  padding: 20px 0 60px;
+}
+.card {
+  display: block; background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 20px; box-shadow: var(--shadow);
+  transition: transform .14s ease, border-color .14s ease, box-shadow .14s ease;
+}
+.card:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--accent) 55%, var(--border)); }
+.card .emoji {
+  width: 46px; height: 46px; border-radius: 11px;
+  display: grid; place-items: center; font-size: 24px;
+  background: var(--accent-soft); margin-bottom: 14px;
+}
+.card h3 { margin: 0 0 6px; font-size: 17px; color: var(--text); letter-spacing: -.01em; }
+.card p { margin: 0; color: var(--text-muted); font-size: 14px; }
+.card.soon { opacity: .6; pointer-events: none; }
+.card .tag {
+  display: inline-block; margin-top: 12px; font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .04em;
+  color: var(--accent); background: var(--accent-soft);
+  padding: 3px 8px; border-radius: 999px;
+}
+
+/* ---- Generic UI bits ------------------------------------------------- */
+.btn {
+  appearance: none; cursor: pointer; font: inherit; font-weight: 600;
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--text); padding: 10px 16px; border-radius: var(--radius-sm);
+  transition: background .12s, border-color .12s, transform .05s;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.btn:hover { background: var(--surface-2); }
+.btn:active { transform: translateY(1px); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+
+.footer {
+  border-top: 1px solid var(--border); color: var(--text-muted);
+  font-size: 13px; padding: 24px 0; text-align: center;
+}
+.footer a { font-weight: 600; }
