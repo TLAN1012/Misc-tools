@@ -162,7 +162,7 @@
     modeSeg.querySelectorAll("button").forEach((x) => x.classList.toggle("active", x === b));
     stackOpts.hidden = mode !== "stack";
     modeHint.textContent = mode === "auto"
-      ? "自動偵測相鄰截圖的重疊區並對齊，適合捲動連拍的長內容。"
+      ? "自動偵測相鄰截圖的重疊區並對齊、略過重複張，適合捲動連拍的長內容。"
       : "單純由上到下堆疊，可設定間距與背景色，適合拼接不相關的圖片。";
   });
 
@@ -191,6 +191,7 @@
   const SAMPLES = 32;          // columns sampled per row for the signature
   const EDGE_IGNORE = 0.06;    // ignore 6% on each side (rounded corners / bars)
   const MATCH_THRESHOLD = 0.045; // normalised SAD below this = trusted overlap
+  const DUP_THRESHOLD = 0.055; // whole-frame match below this = duplicate shot
 
   /** Render an image to an offscreen canvas at the target width. */
   function toCanvas(it, targetW) {
@@ -253,11 +254,40 @@
     if (bestYb < 0 || score > MATCH_THRESHOLD) return { skip: 0, score };
     // A's bottom (row hA) lines up with B row (bestYb + bandH)
     const skip = bestYb + bandH;
-    // A match that consumes the whole of B leaves no new content to append —
-    // almost always a false positive from a repeated footer, browser chrome
-    // or blank margin at the bottom. Reject it rather than drop the image.
-    if (skip >= hB) return { skip: 0, score };
+    // A band match that leaves no new content below could mean two things:
+    //   (a) B is a duplicate/subset of A — the whole frame repeats.
+    //   (b) only a repeated footer / browser chrome / blank margin matched,
+    //       while the rest of B is genuinely new content.
+    // Tell them apart by checking the whole implied overlap, not just the band:
+    // if the bulk of the two frames agree it is a duplicate → drop it; if only
+    // the band agreed it is a false positive → keep the frame in full.
+    if (skip >= hB) {
+      return isDuplicate(sigA, hA, sigB, hB, bestYb - aStart)
+        ? { skip: hB, score, duplicate: true }
+        : { skip: 0, score };
+    }
     return { skip, score };
+  }
+
+  /**
+   * Given the band alignment (A row r ↔ B row r + delta), measure how well the
+   * *entire* overlapping region of the two frames agrees. Returns true when
+   * they match over a large span — i.e. B repeats content already in A.
+   */
+  function isDuplicate(sigA, hA, sigB, hB, delta) {
+    const rStart = Math.max(0, -delta);
+    const rEnd = Math.min(hA, hB - delta);
+    const count = rEnd - rStart;
+    if (count < Math.min(hA, hB) * 0.5) return false; // too little to judge
+    let sad = 0;
+    for (let r = rStart; r < rEnd; r++) {
+      const ab = r * SAMPLES, bb = (r + delta) * SAMPLES;
+      for (let s = 0; s < SAMPLES; s++) {
+        const d = sigA[ab + s] - sigB[bb + s];
+        sad += d < 0 ? -d : d;
+      }
+    }
+    return sad / (count * SAMPLES * 255) < DUP_THRESHOLD;
   }
 
   // ---- generate ----------------------------------------------------------
@@ -275,7 +305,7 @@
 
       const canvases = items.map((it) => toCanvas(it, targetW));
 
-      let layout, totalH, seams = 0;
+      let layout, totalH, seams = 0, dups = 0;
 
       if (mode === "stack") {
         const gap = Math.max(0, Number(gapInput.value) || 0);
@@ -288,13 +318,18 @@
         const sigs = canvases.map((c) => rowSignatures(c.getContext("2d"), c.width, c.height));
         layout = [{ canvas: canvases[0], srcY: 0, drawH: canvases[0].height, y: 0 }];
         let y = canvases[0].height;
+        let prev = 0;                            // index of the last kept frame
         for (let i = 1; i < canvases.length; i++) {
-          const A = canvases[i - 1], B = canvases[i];
-          const { skip, score } = detectOverlap(sigs[i - 1], A.height, sigs[i], B.height);
+          const A = canvases[prev], B = canvases[i];
+          const res = detectOverlap(sigs[prev], A.height, sigs[i], B.height);
+          if (res.duplicate) { dups++; continue; } // repeated shot — drop it,
+                                                   // keep comparing against prev
+          const skip = res.skip;
           if (skip > 0 && skip < B.height) seams++;
           const drawH = B.height - skip;
           layout.push({ canvas: B, srcY: skip, drawH, y });
           y += drawH;
+          prev = i;
         }
         totalH = y;
       }
@@ -323,8 +358,9 @@
       resultBlob = await new Promise((res) => out.toBlob(res, "image/png"));
 
       info.hidden = false;
+      const joins = layout.length - 1;
       const overlapNote = mode === "auto"
-        ? `${seams}/${items.length - 1} 個接縫偵測到重疊`
+        ? `${seams}/${joins} 個接縫偵測到重疊` + (dups ? ` · 略過 ${dups} 張重複` : "")
         : "垂直堆疊";
       info.innerHTML =
         `<span class="badge">${targetW} × ${totalH}</span>` +
@@ -332,6 +368,7 @@
         `<span>${overlapNote}</span>` +
         (resultBlob ? `<span>${(resultBlob.size / 1024).toFixed(0)} KB</span>` : "");
 
+      if (dups) showToast(`已略過 ${dups} 張重複的截圖`);
       dlBtn.disabled = false;
       copyBtn.disabled = !window.ClipboardItem;
     } catch (err) {
